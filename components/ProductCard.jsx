@@ -3,7 +3,7 @@ import { assets } from '@/assets/assets'
 import Image from 'next/image';
 import { useAppContext } from '@/context/AppContext';
 
-const ProductCard = ({ product }) => {
+const ProductCard = ({ product = {} }) => {
 
     const { currency, router } = useAppContext()
 
@@ -13,8 +13,9 @@ const ProductCard = ({ product }) => {
             className="flex flex-col items-start gap-0.5 max-w-[200px] w-full cursor-pointer"
         >
             <div className="cursor-pointer group relative bg-gray-500/10 rounded-lg w-full h-52 flex items-center justify-center">
-                <Image
-                    src={product.image[0]}
+            <Image
+                src={product.image && product.image.length > 0 ? product.image[0] : '/default-image.png'}
+
                     alt={product.name}
                     className="group-hover:scale-105 transition object-cover w-4/5 h-4/5 md:w-full md:h-full"
                     width={800}

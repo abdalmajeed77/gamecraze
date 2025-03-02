@@ -1,23 +1,26 @@
 import mongoose from "mongoose";
-let cached = global.mongoose;
-if (!cached) {
-    cached = global.mongoose = { conn: null, promise: null }; 1
-}
-async function ConnectDB() {
-    if (cached.conn) {
-        return cached.conn;
-    }
-    if (!cached.promise) {
-        const opts = {
 
-            bufferCommands: false,
-
-        };
-        cached.promise = mongoose.connect('${process.env.MONGO_URI}/quickcart', opts).then((mongoose) => {
-            return mongoose;
-        });
-        cached.conn = await cached.promise;
-        return cached.conn;
+const connectDB = async () => {
+    if (mongoose.connection.readyState >= 1) {
+        console.log("✅ Already connected to MongoDB");
+        return;
     }
-}
-export default ConnectDB;
+
+        if (!process.env.MONGODB_URI) {
+
+        throw new Error("❌ MONGO_URI is missing!");
+    }
+
+    console.log("MongoDB URI:", process.env.MONGODB_URI); // Log the MongoDB URI for debugging
+    try {
+        await mongoose.connect(process.env.MONGODB_URI); // Removed deprecated options
+
+
+        console.log("✅ MongoDB Connected to gamecart database");
+    } catch (error) {
+        console.error("❌ MongoDB Connection Error:", error);
+        process.exit(1);
+    }
+};
+
+export default connectDB;

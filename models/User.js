@@ -1,9 +1,11 @@
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
+const connectDB = require("../utils/connectDB");
+import { Schema, model, models  } from "mongoose";
 
-const userSchema = new mongoose.Schema({   
+const userSchema = new Schema({   
     _id: {  
-        type:String,
-        required:true
+        type: String,
+        required: true
     },
     name: {
         type: String,
@@ -21,9 +23,14 @@ const userSchema = new mongoose.Schema({
         type: Object,
         required: true,
     },
-   
 }, {
     minimize: false,
 });
-const User = mongoose.models.User || mongoose.model("User", userSchema);
-export default User;
+
+const User = models?.User || model("User", userSchema);
+
+(async () => {
+    await connectDB();
+})();
+
+module.exports = User;

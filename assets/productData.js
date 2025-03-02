@@ -7,7 +7,7 @@ export const products = [
     description: "Noise-cancellation, 40-hour battery",
     rating: 4.5,
     price: "$299.99",
-    imgSrc: assets.apple_earphone_image,
+    //imgSrc: assets.apple_earphone_image,
   },
   {
     id: 2,
@@ -15,7 +15,7 @@ export const products = [
     description: "Noise Cancellation, 24-hour battery",
     rating: 4.5,
     price: "$329.99",
-    imgSrc: assets.bose_headphone_image,
+    //imgSrc: assets.bose_headphone_image,
   },
   {
     id: 3,
@@ -135,7 +135,7 @@ export const products = [
     description: "M2 Pro Chip, 16GB RAM, 512GB SSD",
     rating: 4.5,
     price: "$2,499.99",
-    imgSrc: assets.macbook_image,
+    //imgSrc: assets.macbook_image,
   },
   {
     id: 18,

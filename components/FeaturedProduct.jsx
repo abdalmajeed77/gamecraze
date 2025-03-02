@@ -5,29 +5,30 @@ import Image from "next/image";
 const products = [
   {
     id: 1,
-    image: assets.girl_with_headphone_image,
-    title: "Unparalleled Sound",
-    description: "Experience crystal-clear audio with premium headphones.",
+    image: assets.girl_with_headphone_image, // Keep the same image URL
+    title: "Instant Game Recharge",
+    description: "Top up your favorite games instantly and enjoy uninterrupted gaming sessions.",
   },
   {
     id: 2,
-    image: assets.girl_with_earphone_image,
-    title: "Stay Connected",
-    description: "Compact and stylish earphones for every occasion.",
+    image: assets.girl_with_earphone_image, // Keep the same image URL
+    title: "Seamless App Recharge",
+    description: "Recharge your apps effortlessly and stay connected with the latest features.",
   },
   {
     id: 3,
-    image: assets.boy_with_laptop_image,
-    title: "Power in Every Pixel",
-    description: "Shop the latest laptops for work, gaming, and more.",
+    image: assets.boy_with_laptop_image, // Keep the same image URL
+    title: "Ultimate Subscriptions",
+    description: "Get the best deals on game and app subscriptions for endless entertainment.",
   },
 ];
+
 
 const FeaturedProduct = () => {
   return (
     <div className="mt-14">
       <div className="flex flex-col items-center">
-        <p className="text-3xl font-medium">Featured Products</p>
+        <p className="text-3xl font-medium">Featured TOP-UPS</p>
         <div className="w-28 h-0.5 bg-orange-600 mt-2"></div>
       </div>
 
@@ -45,7 +46,7 @@ const FeaturedProduct = () => {
                 {description}
               </p>
               <button className="flex items-center gap-1.5 bg-orange-600 px-4 py-2 rounded">
-                Buy now <Image className="h-3 w-3" src={assets.redirect_icon} alt="Redirect Icon" />
+                Rcharge now <Image className="h-3 w-3" src={assets.redirect_icon} alt="Redirect Icon" />
               </button>
             </div>
           </div>

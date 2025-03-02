@@ -8,19 +8,32 @@ import Loading from "@/components/Loading";
 
 const ProductList = () => {
 
-  const { router } = useAppContext()
+  const { router, getToken, user } = useAppContext()
 
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
 
   const fetchSellerProduct = async () => {
-    setProducts(productsDummyData)
-    setLoading(false)
+    try {
+      const token = await getToken()
+      const { data } = await axios.get('/api/product/adminlist', { headers: { Authorization: `Bearer ${token}` } })
+      if (data.success) {
+        setProducts(data.data)
+        setLoading(false)
+      } else {
+        toast.error(data.message)
+      }
+    } catch (error) {
+      toast.error(error.message)
+      
+    }
   }
 
   useEffect(() => {
-    fetchSellerProduct();
-  }, [])
+    if(user){
+      fetchSellerProduct()
+    }
+  }, [user])
 
   return (
     <div className="flex-1 min-h-screen flex flex-col justify-between">

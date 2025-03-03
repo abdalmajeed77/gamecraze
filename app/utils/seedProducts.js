@@ -1,5 +1,5 @@
-const ConnectDB = require('@/config/db');
-const Product = require('@/models/Product');
+const ConnectDB = require('./config/db');
+const Product = require('./models/Product');
 
 const sampleProducts = [
     {

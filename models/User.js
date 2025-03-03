@@ -1,8 +1,7 @@
 const mongoose = require("mongoose");
 const connectDB = require("../utils/connectDB");
-import { Schema, model, models  } from "mongoose";
 
-const userSchema = new Schema({   
+const userSchema = new mongoose.Schema({   
     _id: {  
         type: String,
         required: true
@@ -19,18 +18,25 @@ const userSchema = new Schema({
         type: String,
         required: true,
     },
-    cartItems: {
-        type: Object,
-        required: true,
-    },
+    cartItems: [{
+        productId: { type: String, required: true },
+        quantity: { type: Number, required: true }
+    }],
+
+
 }, {
     minimize: false,
 });
 
-const User = models?.User || model("User", userSchema);
+const User = mongoose.models.User || mongoose.model("User", userSchema);
 
 (async () => {
-    await connectDB();
+    try {
+        await connectDB();
+    } catch (error) {
+        console.error("Database connection failed:", error);
+    }
 })();
+
 
 module.exports = User;

@@ -23,25 +23,33 @@ export const AppContextProvider = (props) => {
   const [isSeller, setIsSeller] = useState(false);
   const [cartItems, setCartItems] = useState({});
 
-  const fetchProductData = async () => {
+const fetchProductData = async () => {
+  console.log("Fetching product data..."); // Debugging log
+
     try {
       const { data } = await axios.get('/api/product/list');
       if (data.success) {
         setProducts(data.products);
       } else {
-        toast.error(data.message || "Failed to fetch products");
+        toast.error(data?.message || "Failed to fetch products");
       }
     } catch (error) {
       toast.error(error?.response?.data?.message || "Error fetching products");
     }
   };
 
-  const fetchUserData = async () => {
+const fetchUserData = async () => {
+  console.log("Fetching user data..."); // Debugging log
+
     try {
       if (user.publicMetadata.role === 'seller') {
         setIsSeller(true);
       }
-      const token = await getToken();
+      const tokenResponse = await getToken();
+      const token = tokenResponse?.token;
+      if (!token) {
+        throw new Error("Failed to retrieve token");
+      }
       const { data } = await axios.get('/api/user/data', { headers: { Authorization: `Bearer ${token}` } });
       if (data.success) {
         setUserData(data.user);

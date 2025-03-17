@@ -1,11 +1,14 @@
-import connectDB from "@/utils/connectDB";
-import User from "@/models/User";
+import connectDB from "utils/connectDB";
+import User from "../../../models/User";
+
 import { getAuth } from "@clerk/nextjs/server";
 
 export default async function handler(req, res) {
     await connectDB();
 
+    console.log("Authentication request received for user:", { email, firstName, lastName }); // Log authentication attempts
     const { userId, email, firstName, lastName, imageUrl } = getAuth(req);
+
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
     try {
@@ -19,7 +22,8 @@ export default async function handler(req, res) {
 
         return res.status(200).json(user);
     } catch (error) {
-        console.error("Database Error:", error);
+        console.error("Database Error during authentication:", error); // Log any database errors
+
         return res.status(500).json({ error: "Internal Server Error" });
     }
 }

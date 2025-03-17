@@ -1,29 +1,36 @@
 {
-  "name": "ecommerce-inngest",
+  "name": "GAMECART",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
+    "start:webhook": "node app/api/webhooks/route.js",
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "start:all": "concurrently \"npm run start:webhook\" \"npm run dev\""
   },
   "dependencies": {
     "@clerk/nextjs": "^6.11.3",
     "axios": "^1.7.9",
+    "body-parser": "^1.20.3",
     "cloudinary": "^2.5.1",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
     "inngest": "^3.31.7",
-    "mongodb": "^6.13.0",
+    "mongodb": "^6.14.2",
     "mongoose": "^8.10.1",
     "next": "15.1.6",
     "node": "^18.20.7",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hot-toast": "^2.5.1",
-    "svix": "^1.61.0"
+    "svix": "^1.61.4"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "concurrently": "^7.0.0",
     "eslint": "^9",
     "eslint-config-next": "15.1.6",
     "postcss": "^8",

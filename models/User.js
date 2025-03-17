@@ -1,7 +1,37 @@
-const mongoose = require("mongoose");
-const connectDB = require("../utils/connectDB");
+import mongoose from "mongoose";
+import connectDB from "../utils/connectDB.js"; // Updated import to ES module syntax
 
-const userSchema = new mongoose.Schema({   
+const userSchema = new mongoose.Schema({
+    firstName: {
+        type: String,
+        required: true,
+    },
+    lastName: {
+        type: String,
+        required: true,
+    },
+    gender: {
+        type: String,
+        required: false,
+    },
+    birthday: {
+        type: Date,
+        required: false,
+    },
+    verification: {
+        status: {
+            type: String,
+            required: false,
+        },
+        strategy: {
+            type: String,
+            required: false,
+        }
+    },
+    externalId: {
+        type: String,
+        required: false,
+    },
     _id: {  
         type: String,
         required: true
@@ -22,8 +52,6 @@ const userSchema = new mongoose.Schema({
         productId: { type: String, required: true },
         quantity: { type: Number, required: true }
     }],
-
-
 }, {
     minimize: false,
 });
@@ -38,5 +66,4 @@ const User = mongoose.models.User || mongoose.model("User", userSchema);
     }
 })();
 
-
-module.exports = User;
+export default User; // Updated export to ES module syntax

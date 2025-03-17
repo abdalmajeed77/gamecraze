@@ -1,6 +1,10 @@
 import mongoose from "mongoose";
 
+import dotenv from 'dotenv';
+dotenv.config(); // Load environment variables from .env file
+
 const connectDB = async () => {
+
     if (mongoose.connection.readyState >= 1) {
         console.log("✅ Already connected to MongoDB");
         return;

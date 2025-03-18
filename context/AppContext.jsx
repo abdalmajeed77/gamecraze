@@ -70,6 +70,7 @@ const fetchUserData = async () => {
       cartData[itemId] = 1;
     }
     setCartItems(cartData);
+
     if (user) {
       try {
         const tokenResponse = await getToken();

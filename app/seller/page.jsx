@@ -54,7 +54,7 @@ const [price, setPrice] = useState(''); // Initialize price
         setFiles([]);
         setName('');
         setDescription('');
-        setCategory('Earphone');
+        setCategory('');
         setPriceOptions([{ price: '', description: '' }]); // Reset price options
       } else {
         toast.error(data.message);

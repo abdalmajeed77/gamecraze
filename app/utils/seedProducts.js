@@ -1,5 +1,5 @@
-import connectDB from '../../config/db.js'; // Updated import path
-import Product from '../models/Product.js'; // Updated to ES module import
+import connectDB from '@/config/db.js'; // Updated import path
+import Product from '@/models/Product.js'; // Updated to ES module import
 
 const sampleProducts = [
     {

@@ -1,29 +1,34 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState } from "react";
+import axios from "axios";
+import toast from "react-hot-toast";
 
 const ForgotPasswordPage = () => {
-  const [email, setEmail] = useState('');
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
-  const handleForgotPassword = (e) => {
+  const handleForgotPassword = async (e) => {
     e.preventDefault();
     if (!email) {
-      setError('Please enter your email address.');
-      setMessage('');
+      setError("Please enter your email address.");
+      setMessage("");
       return;
     }
 
-    // Simulated password reset logic (replace with real auth logic)
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (emailRegex.test(email)) {
-      setError('');
-      setMessage('A password reset link has been sent to your email!');
-      setEmail(''); // Clear the input after success
-    } else {
-      setError('Please enter a valid email address.');
-      setMessage('');
+    try {
+      const response = await axios.post("/api/login/forgot-password", { email });
+      if (response.data.success) {
+        setError("");
+        setMessage(response.data.message);
+      } else {
+        setError(response.data.message || "Failed to send reset link.");
+      }
+    } catch (error) {
+      setError("An error occurred. Please try again.");
+      toast.error(error.message);
     }
+    setEmail(""); // Clear input after attempt
   };
 
   return (
@@ -49,18 +54,32 @@ const ForgotPasswordPage = () => {
               className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all placeholder-gray-400"
             />
             <span className="absolute inset-y-0 right-3 flex items-center text-gray-400">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 12h5l-9-9-9 9h5v7a2 2 0 002 2h4a2 2 0 002-2v-7z" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M16 12h5l-9-9-9 9h5v7a2 2 0 002 2h4a2 2 0 002-2v-7z"
+                />
               </svg>
             </span>
           </div>
 
           {/* Success/Error Message */}
           {message && (
-            <p className="text-green-500 text-sm text-center animate-fade-in">{message}</p>
+            <p className="text-green-500 text-sm text-center animate-fade-in">
+              {message}
+            </p>
           )}
           {error && (
-            <p className="text-red-500 text-sm text-center animate-fade-in">{error}</p>
+            <p className="text-red-500 text-sm text-center animate-fade-in">
+              {error}
+            </p>
           )}
 
           {/* Submit Button */}
@@ -75,12 +94,16 @@ const ForgotPasswordPage = () => {
         {/* Additional Links */}
         <div className="mt-4 text-center text-yellow-200">
           <p>
-            Remembered your password?{' '}
-            <a href="/login" className="text-yellow-400 hover:underline">Login Here</a>
+            Remembered your password?{" "}
+            <a href="/login" className="text-yellow-400 hover:underline">
+              Login Here
+            </a>
           </p>
           <p className="mt-2">
-            Need an account?{' '}
-            <a href="/login/register" className="text-yellow-400 hover:underline">Register Now</a>
+            Need an account?{" "}
+            <a href="/login/register" className="text-yellow-400 hover:underline">
+              Register Now
+            </a>
           </p>
         </div>
       </div>

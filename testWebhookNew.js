@@ -32,5 +32,8 @@ export const testWebhookNew = async () => {
 };
 
 if (import.meta.url === "file://" + process.argv[1]) {
+if (import.meta.url === "file://" + process.argv[1]) {
     testWebhookNew();
+}
+
 }

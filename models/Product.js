@@ -9,6 +9,10 @@ const productSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    category: { // Keep category field
+        type: String,
+        required: true,
+    },
     price: {
         type: Number,
         required: true,
@@ -27,8 +31,8 @@ const productSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-});
 
+});
 
 const Product = mongoose.models.Product || mongoose.model("Product", productSchema);
 

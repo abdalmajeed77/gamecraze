@@ -1,41 +1,69 @@
-const connectDB = require("./utils/connectDB");
-const User = require("./models/User.js");
+import express from 'express';
+import dotenv from 'dotenv';
+import { Webhook } from 'svix';
+import bodyParser from 'body-parser';
+import mongoose from 'mongoose';
+import User from './userModel.js';
 
-(async () => {
-    await connectDB();
+dotenv.config();
 
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => {
+    console.log('Connected to DB');
+  })
+  .catch((err) => console.log(err.message));
+
+const app = express();
+
+app.post(
+  '/api/webhooks',
+  bodyParser.raw({ type: 'application/json' }),
+  async function (req, res) {
     try {
-const existingUser = await User.findById("user_2tBAUP9DmQ48Ll2sDPcPs5Ru18z");
-if (!existingUser) {
-    const newUser = new User({
-        _id: "user_2tBAUP9DmQ48Ll2sDPcPs5Ru18z",
-        name: "John Doe",
-        email: "johndoe@example.com",
-        imageurl: "https://example.com/image.jpg",
-        cartItems: [], // Empty cart initially
-    });
+      const payloadString = req.body.toString();
+      const svixHeaders = req.headers;
 
-    await newUser.save();
-    console.log("User saved successfully in 'users' collection!");
-} else {
-    console.log("User already exists in 'users' collection!");
+      const wh = new Webhook(process.env.CLERK_WEBHOOK_SECRET_KEY);
+      const evt = wh.verify(payloadString, svixHeaders);
 
-        _id: "user_2tBAUP9DmQ48Ll2sDPcPs5Ru18z",
+      const { id, ...attributes } = evt.data;
 
+      const eventType = evt.type;
 
-            name: "John Doe",
-            email: "johndoe@example.com",
-            imageurl: "https://example.com/image.jpg",
-            cartItems: [], // Empty cart initially
+      if (eventType === 'user.created') {
+        const firstName = attributes.first_name;
+        const lastName = attributes.last_name;
+
+        console.log(firstName);
+
+        const user = new User({
+          clerkUserId: id,
+          firstName: firstName,
+          lastName: lastName,
         });
 
-        await newUser.save();
-    console.log("User already exists in 'users' collection!");
-} else {
-    await newUser.save();
-    console.log("User saved successfully in 'users' collection!");
+        await user.save();
+        console.log('User is created');
+        // console.log(`User ${id} is ${eventType}`);
+        // console.log(attributes);
+      }
 
-    } catch (error) {
-        console.error("Error saving user:", error);
+      res.status(200).json({
+        success: true,
+        message: 'Webhook received',
+      });
+    } catch (err) {
+      res.status(400).json({
+        success: false,
+        message: err.message,
+      });
     }
-})();
+  }
+);
+
+const port = process.env.PORT || 7000;
+
+app.listen(port, () => {
+  console.log(`listening on port ${port}`);
+});

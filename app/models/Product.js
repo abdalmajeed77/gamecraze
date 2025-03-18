@@ -13,6 +13,10 @@ const productSchema = new mongoose.Schema({
         type: Number,
         required: true,
     },
+    category: {
+        type: String,
+        required: true,
+    },
     priceOptions: [{
         price: {
             type: Number,
@@ -28,7 +32,6 @@ const productSchema = new mongoose.Schema({
         required: true,
     },
 });
-
 
 const Product = mongoose.models.Product || mongoose.model("Product", productSchema);
 

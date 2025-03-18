@@ -1,27 +1,43 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState } from "react";
+import axios from "axios";
+import toast from "react-hot-toast";
 
 const RegisterPage = () => {
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     if (!username || !email || !password || !confirmPassword) {
-      setError('Please fill in all fields.');
+      setError("Please fill in all fields.");
       return;
     }
     if (password !== confirmPassword) {
-      setError('Passwords do not match.');
+      setError("Passwords do not match.");
       return;
     }
 
-    // Simulated registration (replace with real auth logic)
-    setError('');
-    alert(`Registration Successful! Welcome, ${username}!`);
+    try {
+      const response = await axios.post("/api/login/register", {
+        name: username,
+        email,
+        password,
+        phoneNumber: "", // Optional, can be added later
+      });
+      if (response.data.success) {
+        setError("");
+        toast.success(response.data.message);
+      } else {
+        setError(response.data.message || "Registration failed.");
+      }
+    } catch (error) {
+      setError("An error occurred. Please try again.");
+      toast.error(error.message);
+    }
   };
 
   return (
@@ -30,7 +46,7 @@ const RegisterPage = () => {
         {/* Logo or Title */}
         <div className="text-center mb-6">
           <h1 className="text-4xl font-bold text-yellow-400 tracking-wider animate-pulse">
-            GameZone
+            GameCART
           </h1>
           <p className="text-yellow-200 mt-2">Join the gaming elite</p>
         </div>
@@ -47,8 +63,18 @@ const RegisterPage = () => {
               className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all placeholder-gray-400"
             />
             <span className="absolute inset-y-0 right-3 flex items-center text-gray-400">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                />
               </svg>
             </span>
           </div>
@@ -63,8 +89,18 @@ const RegisterPage = () => {
               className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all placeholder-gray-400"
             />
             <span className="absolute inset-y-0 right-3 flex items-center text-gray-400">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 12h5l-9-9-9 9h5v7a2 2 0 002 2h4a2 2 0 002-2v-7z" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M16 12h5l-9-9-9 9h5v7a2 2 0 002 2h4a2 2 0 002-2v-7z"
+                />
               </svg>
             </span>
           </div>
@@ -79,8 +115,18 @@ const RegisterPage = () => {
               className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all placeholder-gray-400"
             />
             <span className="absolute inset-y-0 right-3 flex items-center text-gray-400">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 11c1.104 0 2-.896 2-2s-.896-2-2-2-2 .896-2 2 .896 2 2 2zm0 2c-2.761 0-5 2.239-5 5h10c0-2.761-2.239-5-5-5z" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M12 11c1.104 0 2-.896 2-2s-.896-2-2-2-2 .896-2 2 .896 2 2 2zm0 2c-2.761 0-5 2.239-5 5h10c0-2.761-2.239-5-5-5z"
+                />
               </svg>
             </span>
           </div>
@@ -95,8 +141,18 @@ const RegisterPage = () => {
               className="w-full p-3 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all placeholder-gray-400"
             />
             <span className="absolute inset-y-0 right-3 flex items-center text-gray-400">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 11c1.104 0 2-.896 2-2s-.896-2-2-2-2 .896-2 2 .896 2 2 2zm0 2c-2.761 0-5 2.239-5 5h10c0-2.761-2.239-5-5-5z" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M12 11c1.104 0 2-.896 2-2s-.896-2-2-2-2 .896-2 2 .896 2 2 2zm0 2c-2.761 0-5 2.239-5 5h10c0-2.761-2.239-5-5-5z"
+                />
               </svg>
             </span>
           </div>
@@ -118,8 +174,10 @@ const RegisterPage = () => {
         {/* Additional Links */}
         <div className="mt-4 text-center text-yellow-200">
           <p>
-            Already a member?{' '}
-            <a href="/login" className="text-yellow-400 hover:underline">Login Here</a>
+            Already a member?{" "}
+            <a href="/login" className="text-yellow-400 hover:underline">
+              Login Here
+            </a>
           </p>
         </div>
       </div>

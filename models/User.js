@@ -1,69 +1,39 @@
 import mongoose from "mongoose";
-import connectDB from "../utils/connectDB.js"; // Updated import to ES module syntax
+import bcrypt from "bcryptjs";
 
 const userSchema = new mongoose.Schema({
-    firstName: {
-        type: String,
-        required: true,
-    },
-    lastName: {
-        type: String,
-        required: true,
-    },
-    gender: {
-        type: String,
-        required: false,
-    },
-    birthday: {
-        type: Date,
-        required: false,
-    },
-    verification: {
-        status: {
-            type: String,
-            required: false,
-        },
-        strategy: {
-            type: String,
-            required: false,
-        }
-    },
-    externalId: {
-        type: String,
-        required: false,
-    },
-    _id: {  
-        type: String,
-        required: true
-    },
-    name: {
-        type: String,
-        required: true,
-    },
-    email: {
-        type: String,
-        required: true,
-    },
-    imageurl: {
-        type: String,
-        required: true,
-    },
-    cartItems: [{
-        productId: { type: String, required: true },
-        quantity: { type: Number, required: true }
-    }],
-}, {
-    minimize: false,
+  email: { type: String, required: true, unique: true },
+  name: { type: String, required: true },
+  password: { type: String, required: true },
+  phoneNumber: { type: String },
+  isBlocked: { type: Boolean, default: false },
+  resetToken: { type: String },
+  resetTokenExpiry: { type: Date },
+  isadmin: { type: Boolean, default: false },  
+  jwtToken: { type: String }, // New field to store JWT
+  cartItems: [{
+    productId: { type: String, required: true },
+    quantity: { type: Number, required: true }
+    }]
 });
 
-const User = mongoose.models.User || mongoose.model("User", userSchema);
+// Hash password before saving
+userSchema.pre("save", async function (next) {
+  if (this.isModified("password")) {
+    this.password = await bcrypt.hash(this.password, 10);
+  }
+  next();
+});
 
-(async () => {
-    try {
-        await connectDB();
-    } catch (error) {
-        console.error("Database connection failed:", error);
-    }
-})();
+// Method to compare passwords
+userSchema.methods.comparePassword = async function (password) {
+  return bcrypt.compare(password, this.password);
+};
 
-export default User; // Updated export to ES module syntax
+// Method to clear JWT (e.g., on logout)
+userSchema.methods.clearJwtToken = async function () {
+  this.jwtToken = undefined;
+  await this.save();
+};
+
+export default mongoose.models.User || mongoose.model("User", userSchema);

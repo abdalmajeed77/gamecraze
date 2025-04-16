@@ -2,38 +2,67 @@ import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
 const userSchema = new mongoose.Schema({
-  email: { type: String, required: true, unique: true },
-  name: { type: String, required: true },
-  password: { type: String, required: true },
-  phoneNumber: { type: String },
-  isBlocked: { type: Boolean, default: false },
-  resetToken: { type: String },
-  resetTokenExpiry: { type: Date },
-  isadmin: { type: Boolean, default: false },  
-  jwtToken: { type: String }, // New field to store JWT
-  cartItems: [{
-    productId: { type: String, required: true },
-    quantity: { type: Number, required: true }
-    }]
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    lowercase: true,
+    trim: true,
+  },
+  password: {
+    type: String,
+    required: true,
+  },
+  name: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  phoneNumber: {
+    type: String,
+    default: "",
+  },
+  role: {
+    type: String,
+    enum: ["user", "seller"],
+    default: "user",
+  },
+  cartItems: {
+    type: Object,
+    default: {},
+  },
+  isBlocked: {
+    type: Boolean,
+    default: false,
+  },
+  isAdmin: {
+    type: Boolean,
+    default: false,
+  },
+  jwtToken: {
+    type: String,
+    default: "",
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
 });
 
 // Hash password before saving
 userSchema.pre("save", async function (next) {
   if (this.isModified("password")) {
-    this.password = await bcrypt.hash(this.password, 10);
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
   }
   next();
 });
 
 // Method to compare passwords
 userSchema.methods.comparePassword = async function (password) {
-  return bcrypt.compare(password, this.password);
+  return await bcrypt.compare(password, this.password);
 };
 
-// Method to clear JWT (e.g., on logout)
-userSchema.methods.clearJwtToken = async function () {
-  this.jwtToken = undefined;
-  await this.save();
-};
+const User = mongoose.models.User || mongoose.model("User", userSchema);
 
-export default mongoose.models.User || mongoose.model("User", userSchema);
+export default User;

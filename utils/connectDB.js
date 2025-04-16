@@ -1,21 +1,41 @@
-import mongoose from "mongoose"; // Updated to ES module import
+import mongoose from 'mongoose';
 
+const MONGODB_URI = process.env.MONGODB_URI;
 
-const MONGO_URI = "mongodb+srv://abdhackiabd:abdalmajeed@cluster0.jk8s0.mongodb.net/gamecart?retryWrites=true&w=majority&appName=Cluster0"; // No change
+if (!MONGODB_URI) {
+  throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
+}
 
+let cached = global.mongoose;
 
-const connectDB = async () => {
-    if (mongoose.connection.readyState >= 1) {
-        console.log("✅ Already connected to MongoDB");
-        return;
-    }
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
 
-    await mongoose.connect(MONGO_URI).catch(error => {
-        console.error("❌ Error connecting to MongoDB:", error); // Added error logging
+async function connectDB() {
+  if (cached.conn) {
+    return cached.conn;
+  }
+
+  if (!cached.promise) {
+    const opts = {
+      bufferCommands: false,
+      dbName: 'gamecart',
+    };
+
+    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+      return mongoose;
     });
+  }
 
+  try {
+    cached.conn = await cached.promise;
+  } catch (e) {
+    cached.promise = null;
+    throw e;
+  }
 
-    console.log("✅ Connected to MongoDB");
-};
+  return cached.conn;
+}
 
-export default connectDB; // Updated to ES module export
+export default connectDB;

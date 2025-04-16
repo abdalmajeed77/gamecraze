@@ -1,29 +1,57 @@
-import connectDB from "utils/connectDB";
-import User from "../../../models/User";
-
-import { getAuth } from "@clerk/nextjs/server";
-
-export default async function handler(req, res) {
-    await connectDB();
-
-    console.log("Authentication request received for user:", { email, firstName, lastName }); // Log authentication attempts
-    const { userId, email, firstName, lastName, imageUrl } = getAuth(req);
-
-    if (!userId) return res.status(401).json({ error: "Unauthorized" });
-
+export async function GET(request) {
+    const headers = new Headers();
+    headers.set("Access-Control-Allow-Origin", "*");
+    headers.set("Access-Control-Allow-Methods", "GET, OPTIONS");
+    headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    headers.set("Access-Control-Allow-Credentials", "true");
     try {
-        let user = await User.findOne({ _id: userId });
-
-        if (!user) {
-            console.log("Creating user:", { _id: userId, email, firstName, lastName, imageurl: imageUrl });
-            const name = `${firstName} ${lastName}`;
-            user = await User.create({ _id: userId, email, name, imageurl: imageUrl, cartItems: {} });
-        }
-
-        return res.status(200).json(user);
+      const cookieToken = request.cookies.get("token")?.value;
+      const authHeader = request.headers.get("authorization");
+      const headerToken = authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : null;
+      const token = headerToken || cookieToken;
+      if (!token) {
+        console.log("No token found in request");
+        return NextResponse.json(
+          { verified: false, message: "No token provided" },
+          { status: 401 }
+        );
+      }
+      if (!process.env.JWT_SECRET) {
+        console.error("JWT_SECRET environment variable is not set");
+        return NextResponse.json(
+          { verified: false, message: "Internal server error" },
+          { status: 500 }
+        );
+      }
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      return NextResponse.json(
+        {
+          verified: true,
+          user: {
+            id: decoded.userId,
+            email: decoded.email,
+            role: decoded.role,
+          },
+        },
+        { status: 200 }
+      );
     } catch (error) {
-        console.error("Database Error during authentication:", error); // Log any database errors
-
-        return res.status(500).json({ error: "Internal Server Error" });
+      console.error("Token verification error:", error.message);
+      if (error.name === "JsonWebTokenError") {
+        return NextResponse.json(
+          { verified: false, message: "Invalid token" },
+          { status: 401 }
+        );
+      }
+      if (error.name === "TokenExpiredError") {
+        return NextResponse.json(
+          { verified: false, message: "Token expired" },
+          { status: 401 }
+        );
+      }
+      return NextResponse.json(
+        { verified: false, message: "Internal server error" },
+        { status: 500 }
+      );
     }
-}
+  }

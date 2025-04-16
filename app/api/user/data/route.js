@@ -1,79 +1,113 @@
-import { getAuth } from "@clerk/nextjs/server.js";
-
 import { NextResponse } from "next/server";
-import ConnectDB from "@/config/db";
-import User from "@/models/User";
+import ConnectDB from "@/config/db.js";
+import User from "@/models/User.js";
+import jwt from "jsonwebtoken";
 
-/**
- * POST handler - Creates or updates a user in MongoDB based on Clerk data
- * @param {Request} request - The incoming request object
- * @returns {NextResponse} JSON response with user data or error message
- */
-export async function POST(request) {
-    try {
-        // Get request body
-        const data = await request.json();
-        
-        // Basic input validation for required Clerk fields
-        const requiredFields = ['id', 'first_name', 'last_name', 'email_addresses', 'image_url'];
-        for (const field of requiredFields) {
-            if (!data[field]) {
-                return NextResponse.json(
-                    { success: false, message: `Missing required field: ${field}` },
-                    { status: 400 }
-                );
-            }
-        }
+export async function GET(request) {
+  try {
+    // Ensure database connection
+    await ConnectDB();
 
-        await ConnectDB();
-        
-        // Extract email from email_addresses array
-        const email = data.email_addresses && data.email_addresses[0] ? data.email_addresses[0].email_address : null;
-        if (!email) {
-            return NextResponse.json(
-                { success: false, message: "Email address is required" },
-                { status: 400 }
-            );
-        }
-
-        // Check if user already exists
-        let user = await User.findById(data.id);
-        if (user) {
-            // Update existing user
-            user.firstName = data.first_name || user.firstName;
-            user.lastName = data.last_name || user.lastName;
-            user.name = `${data.first_name || user.firstName} ${data.last_name || user.lastName}`.trim() || user.name;
-            user.email = email;
-            user.imageurl = data.image_url || user.imageurl;
-            await user.save();
-            console.log(`User ${data.id} updated in MongoDB`);
-            return NextResponse.json(
-                { success: true, data: user },
-                { status: 200 }
-            );
-        } else {
-            // Create new user document
-            const newUserData = {
-                _id: data.id,
-                firstName: data.first_name || '',
-                lastName: data.last_name || '',
-                name: `${data.first_name || ''} ${data.last_name || ''}`.trim() || 'Unknown',
-                email: email,
-                imageurl: data.image_url || null,
-            };
-            const newUser = new User(newUserData);
-            await newUser.save();
-            console.log(`User ${data.id} created in MongoDB`);
-            return NextResponse.json(
-                { success: true, data: newUser },
-                { status: 201 }
-            );
-        }
-    } catch (error) {
-        console.error("POST error:", error);
-        return NextResponse.json(
-            { success: false, message: "Internal server error" },
-            { status: 500 }
-        );
+    // Check for authorization header
+    const authHeader = request.headers.get("authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      console.log("No token provided in Authorization header");
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Unauthorized",
+          message: "No token provided",
+        },
+        { status: 401 }
+      );
     }
+
+    // Extract and verify token
+    const token = authHeader.split(" ")[1];
+    if (!process.env.JWT_SECRET) {
+      console.error("JWT_SECRET environment variable is not set");
+      return NextResponse.json(
+        {
+          success: false,
+          error: "ServerError",
+          message: "Internal server error",
+        },
+        { status: 500 }
+      );
+    }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Validate token payload
+    if (!decoded.userId) {
+      console.log("Token payload missing userId");
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Unauthorized",
+          message: "Invalid token payload",
+        },
+        { status: 401 }
+      );
+    }
+
+    // Fetch user from database
+    console.log("Fetching user data for ID:", decoded.userId);
+    const user = await User.findById(decoded.userId).select("-password");
+    if (!user) {
+      console.log("User not found for ID:", decoded.userId);
+      return NextResponse.json(
+        {
+          success: false,
+          error: "NotFound",
+          message: "User not found",
+        },
+        { status: 404 }
+      );
+    }
+
+    // Return user data
+    return NextResponse.json({
+      success: true,
+      data: {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        cartItems: user.cartItems || {}, // Adjust to [] if schema defines an array
+      },
+    });
+  } catch (error) {
+    console.error("Error in /api/user/data:", error);
+
+    // Handle specific JWT errors
+    if (error.name === "TokenExpiredError") {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Unauthorized",
+          message: "Token expired",
+        },
+        { status: 401 }
+      );
+    } else if (error.name === "JsonWebTokenError") {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Unauthorized",
+          message: "Invalid token",
+        },
+        { status: 401 }
+      );
+    }
+
+    // Generic error
+    return NextResponse.json(
+      {
+        success: false,
+        error: "ServerError",
+        message: "Internal server error",
+      },
+      { status: 500 }
+    );
+  }
 }

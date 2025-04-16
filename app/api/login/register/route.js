@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
-import User from "@/models/User";
+import User from "@/models/User.js";
 
 export async function connectDB() {
   if (mongoose.connection.readyState !== 1) {
@@ -14,8 +14,8 @@ export async function POST(request) {
   console.log("Register request received");
   try {
     await connectDB();
-    const { email, password, name, phoneNumber } = await request.json();
-    console.log("Request body:", { email, name, phoneNumber });
+    const { email, password, name, phoneNumber, role } = await request.json();
+    console.log("Request body:", { email, name, phoneNumber, role });
 
     if (!email || !password || !name) {
       return NextResponse.json(
@@ -34,17 +34,18 @@ export async function POST(request) {
 
     const user = new User({
       email,
+      password, // Password will be hashed by the pre-save hook
       name,
-      password,
       phoneNumber: phoneNumber || "",
-      isAdmin: false, // Explicitly set isAdmin to false
-      tokens: [], // Initialize tokens array
-      cartItems: [], // Initialize cartItems array
+      role: role || "user",
+      isAdmin: false,
+      cartItems: {},
+      isBlocked: false,
     });
     await user.save();
 
     return NextResponse.json(
-      { success: true, message: "Registration successful" },
+      { success: true, message: "Registration successful", userId: user._id },
       { status: 201 }
     );
   } catch (error) {

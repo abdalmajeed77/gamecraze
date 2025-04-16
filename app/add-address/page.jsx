@@ -6,7 +6,6 @@ import Image from "next/image";
 import { useState } from "react";
 
 const AddAddress = () => {
-
     const [address, setAddress] = useState({
         fullName: '',
         phoneNumber: '',
@@ -14,12 +13,12 @@ const AddAddress = () => {
         area: '',
         city: '',
         state: '',
-    })
+    });
 
     const onSubmitHandler = async (e) => {
         e.preventDefault();
-
-    }
+        // Submission logic can be added here if needed
+    };
 
     return (
         <>

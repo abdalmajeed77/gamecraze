@@ -1,16 +1,8 @@
 import { NextResponse } from "next/server";
-import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import User from "@/models/User";
-
-export async function connectDB() {
-  if (mongoose.connection.readyState !== 1) {
-    console.log("Connecting to MongoDB...");
-    await mongoose.connect(process.env.MONGODB_URI, { dbName: "gamecart" });
-    console.log("MongoDB connected");
-  }
-}
+import User from "@/models/User.js";
+import connectDB from "@/utils/connectDB";
 
 export async function POST(request) {
   console.log("Login request received");
@@ -19,6 +11,7 @@ export async function POST(request) {
     const { email, password } = await request.json();
     console.log("Request body:", { email, password });
 
+    // Validate input
     if (!email || !password) {
       return NextResponse.json(
         { success: false, message: "Email and password are required" },
@@ -26,6 +19,7 @@ export async function POST(request) {
       );
     }
 
+    // Find user by email
     const user = await User.findOne({ email });
     if (!user) {
       return NextResponse.json(
@@ -34,6 +28,7 @@ export async function POST(request) {
       );
     }
 
+    // Compare password
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       return NextResponse.json(
@@ -42,6 +37,7 @@ export async function POST(request) {
       );
     }
 
+    // Check if account is blocked
     if (user.isBlocked) {
       return NextResponse.json(
         { success: false, message: "Account is blocked" },
@@ -49,23 +45,67 @@ export async function POST(request) {
       );
     }
 
-    console.log("JWT_SECRET:", process.env.JWT_SECRET);
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "1h",
-    });
+    // Validate JWT_SECRET
+    if (!process.env.JWT_SECRET) {
+      console.error("JWT_SECRET environment variable is not set");
+      return NextResponse.json(
+        { success: false, message: "Internal server error" },
+        { status: 500 }
+      );
+    }
 
-    // Store the JWT in the user's document
-    user.jwtToken = token;
-    await user.save();
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: user._id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
 
+    // Optional: Store token in user document (uncomment if needed)
+    // user.jwtToken = token;
+    // await user.save();
+
+    // Successful login response
     return NextResponse.json(
-      { success: true, message: "Login successful", token, userId: user._id },
+      {
+        success: true,
+        message: "Login successful",
+        token,
+        userId: user._id,
+        role: user.role,
+      },
       { status: 200 }
     );
   } catch (error) {
-    console.error("Login error:", error);
+    console.error("Login error details:", {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
+
+    // Specific error handling
+    if (error.name === "JsonWebTokenError") {
+      return NextResponse.json(
+        { success: false, message: "Invalid token configuration" },
+        { status: 500 }
+      );
+    }
+    if (error.name === "MongoError") {
+      return NextResponse.json(
+        { success: false, message: "Database error. Please try again later." },
+        { status: 500 }
+      );
+    }
+    if (error.name === "ValidationError") {
+      return NextResponse.json(
+        { success: false, message: "Invalid input data" },
+        { status: 400 }
+      );
+    }
+
+    // Generic error
     return NextResponse.json(
-      { success: false, message: "Internal server error" },
+      { success: false, message: `An unexpected error occurred: ${error.message}` },
       { status: 500 }
     );
   }

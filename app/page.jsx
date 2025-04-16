@@ -1,4 +1,4 @@
-'use client'
+"use client";
 import React from "react";
 import HeaderSlider from "@/components/HeaderSlider";
 import HomeProducts from "@/components/HomeProducts";
@@ -9,10 +9,11 @@ import Navbar from "@/components/Navbar";
 import CategoryBar from "@/components/CategoryBar";
 import Footer from "@/components/Footer";
 
+// Home page is public and does not require authentication
 const Home = () => {
   return (
     <>
-      <Navbar/>
+      <Navbar />
       <CategoryBar />
       <div className="px-6 md:px-16 lg:px-32">
         <HeaderSlider />

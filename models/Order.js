@@ -1,24 +1,22 @@
 import mongoose from "mongoose";
 
-
-
 const orderSchema = new mongoose.Schema({
-    userId: { type: 'string', required: true },
-    items: [
+  userId: { type: String, required: true },
+  items: [
+    {
+      gameid: { type: Number, required: true },
+      product: { type: String, required: true },
+      priceoptions: [
         {
-            gameid{type :'Number', required: true},
-            product: { type: 'string', required: true },
-            priceoptions: [
-                {
-                    price: { type: 'number', required: true },
-                    describtion: { type: 'string', required: true }
-                }
-            ]
-            status:{type:'string', required: true, default: 'pending'},
-            date: { type: 'Date', required: true, default: Date.now }
-            
-        }
-    ]
+          price: { type: Number, required: true },
+          description: { type: String, required: true },
+        },
+      ],
+      status: { type: String, required: true, default: "pending" },
+      date: { type: Date, required: true, default: Date.now },
+    },
+  ],
 });
-const order = mongoose.models.order || mongoose.model('order', orderSchema);
-export default order;
+
+const Order = mongoose.models.order || mongoose.model("order", orderSchema);
+export default Order;

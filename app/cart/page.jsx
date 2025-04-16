@@ -1,120 +1,112 @@
-'use client'
-import React from "react";
+'use client';
+import React, { useEffect, useState } from "react";
 import { assets } from "@/assets/assets";
-import OrderSummary from "@/components/OrderSummary";
 import Image from "next/image";
-import Navbar from "@/components/Navbar";
 import { useAppContext } from "@/context/AppContext";
+import Footer from "@/components/Footer";
+import Navbar from "@/components/Navbar";
+import Loading from "@/components/Loading";
+import axios from "axios";
 
-const Cart = () => {
+const MyOrders = () => {
+  const { currency, getToken } = useAppContext();
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const { products, router, cartItems, addToCart, updateCartQuantity, getCartCount } = useAppContext();
+  const fetchOrders = async () => {
+    try {
+      const token = await getToken();
+      const response = await axios.get('/api/orders', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.data.success) {
+        setOrders(response.data.orders || []);
+      } else {
+        setError(response.data.message || "Failed to fetch orders");
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "Error fetching orders");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
 
   return (
     <>
       <Navbar />
-      <div className="flex flex-col md:flex-row gap-10 px-6 md:px-16 lg:px-32 pt-14 mb-20">
-        <div className="flex-1">
-          <div className="flex items-center justify-between mb-8 border-b border-gray-500/30 pb-6">
-            <p className="text-2xl md:text-3xl text-gray-500">
-              Your <span className="font-medium text-orange-600">Cart</span>
-            </p>
-            <p className="text-lg md:text-xl text-gray-500/80">{getCartCount()} Items</p>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full table-auto">
-              <thead className="text-left">
-                <tr>
-                  <th className="text-nowrap pb-6 md:px-4 px-1 text-gray-600 font-medium">
-                    Product Details
-                  </th>
-                  <th className="pb-6 md:px-4 px-1 text-gray-600 font-medium">
-                    Price
-                  </th>
-                  <th className="pb-6 md:px-4 px-1 text-gray-600 font-medium">
-                    Quantity
-                  </th>
-                  <th className="pb-6 md:px-4 px-1 text-gray-600 font-medium">
-                    Subtotal
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.keys(cartItems).map((itemId) => {
-                  const product = products.find(product => product._id === itemId);
-
-                  if (!product || cartItems[itemId] <= 0) return null;
-
-                  return (
-                    <tr key={itemId}>
-                      <td className="flex items-center gap-4 py-4 md:px-4 px-1">
-                        <div>
-                          <div className="rounded-lg overflow-hidden bg-gray-500/10 p-2">
-                            <Image
-                              src={product.image[0]}
-                              alt={product.name}
-                              className="w-16 h-auto object-cover mix-blend-multiply"
-                              width={1280}
-                              height={720}
-                            />
-                          </div>
-                          <button
-                            className="md:hidden text-xs text-orange-600 mt-1"
-                            onClick={() => updateCartQuantity(product._id, 0)}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                        <div className="text-sm hidden md:block">
-                          <p className="text-gray-800">{product.name}</p>
-                          <button
-                            className="text-xs text-orange-600 mt-1"
-                            onClick={() => updateCartQuantity(product._id, 0)}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      </td>
-                      <td className="py-4 md:px-4 px-1 text-gray-600">${product.offerPrice}</td>
-                      <td className="py-4 md:px-4 px-1">
-                        <div className="flex items-center md:gap-2 gap-1">
-                          <button onClick={() => updateCartQuantity(product._id, cartItems[itemId] - 1)}>
-                            <Image
-                              src={assets.decrease_arrow}
-                              alt="decrease_arrow"
-                              className="w-4 h-4"
-                            />
-                          </button>
-                          <input onChange={e => updateCartQuantity(product._id, Number(e.target.value))} type="number" value={cartItems[itemId]} className="w-8 border text-center appearance-none"></input>
-                          <button onClick={() => addToCart(product._id)}>
-                            <Image
-                              src={assets.increase_arrow}
-                              alt="increase_arrow"
-                              className="w-4 h-4"
-                            />
-                          </button>
-                        </div>
-                      </td>
-                      <td className="py-4 md:px-4 px-1 text-gray-600">${(product.offerPrice * cartItems[itemId]).toFixed(2)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <button onClick={()=> router.push('/all-products')} className="group flex items-center mt-6 gap-2 text-orange-600">
-            <Image
-              className="group-hover:-translate-x-1 transition"
-              src={assets.arrow_right_icon_colored}
-              alt="arrow_right_icon_colored"
-            />
-            Continue Shopping
-          </button>
+      <div className="flex flex-col justify-between px-6 md:px-16 lg:px-32 py-6 min-h-screen">
+        <div className="space-y-5">
+          <h2 className="text-lg font-medium mt-6">My Orders</h2>
+          {loading ? (
+            <Loading />
+          ) : error ? (
+            <div className="text-center text-red-500">
+              <p>{error}</p>
+              <button
+                onClick={() => {
+                  setLoading(true);
+                  setError(null);
+                  fetchOrders();
+                }}
+                className="mt-4 text-orange-600 underline"
+              >
+                Retry
+              </button>
+            </div>
+          ) : orders.length === 0 ? (
+            <div className="text-center text-gray-500">
+              <p>No orders found.</p>
+            </div>
+          ) : (
+            <div className="max-w-5xl border-t border-gray-300 text-sm">
+              {orders.map((order, index) => (
+                <div key={index} className="flex flex-col md:flex-row gap-5 justify-between p-5 border-b border-gray-300">
+                  <div className="flex-1 flex gap-5 max-w-80">
+                    <Image
+                      className="max-w-16 max-h-16 object-cover"
+                      src={assets.box_icon}
+                      alt="Order package"
+                    />
+                    <p className="flex flex-col gap-3">
+                      <span className="font-medium text-base">
+                        {order.items?.map((item) => `${item.product?.name || "Unknown"} x ${item.quantity}`).join(", ")}
+                      </span>
+                      <span>Items: {order.items?.length || 0}</span>
+                    </p>
+                  </div>
+                  <div>
+                    <p>
+                      <span className="font-medium">{order.address?.fullName || "N/A"}</span>
+                      <br />
+                      <span>{order.address?.area || ""}</span>
+                      <br />
+                      <span>{order.address ? `${order.address.city}, ${order.address.state}` : "N/A"}</span>
+                      <br />
+                      <span>{order.address?.phoneNumber || "N/A"}</span>
+                    </p>
+                  </div>
+                  <p className="font-medium my-auto">{currency}{order.amount?.toFixed(2) || "0.00"}</p>
+                  <div>
+                    <p className="flex flex-col">
+                      <span>Method: {order.paymentMethod || "COD"}</span>
+                      <span>Date: {new Date(order.date).toLocaleDateString()}</span>
+                      <span>Payment: {order.paymentStatus || "Pending"}</span>
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-        <OrderSummary />
       </div>
+      <Footer />
     </>
   );
 };
 
-export default Cart;
+export default MyOrders;

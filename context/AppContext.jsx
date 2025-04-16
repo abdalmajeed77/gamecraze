@@ -1,7 +1,5 @@
-'use client'
-
-import axios from 'axios';
-import { useAuth, useUser } from "@clerk/nextjs";
+"use client";
+import axios from "axios";
 import { useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useState } from "react";
 import toast from "react-hot-toast";
@@ -10,24 +8,34 @@ export const AppContext = createContext();
 
 export const useAppContext = () => {
   return useContext(AppContext);
-}
+};
 
-export const AppContextProvider = (props) => {
-  const currency = process.env.NEXT_PUBLIC_CURRENCY;
+export const AppContextProvider = ({ children }) => {
+  const currency = process.env.NEXT_PUBLIC_CURRENCY || "$";
   const router = useRouter();
-  const { user } = useUser();
-  const { getToken } = useAuth();
 
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null); // Initialize as null
   const [products, setProducts] = useState([]);
-  const [userData, setUserData] = useState(false);
+  const [userData, setUserData] = useState(null);
   const [isSeller, setIsSeller] = useState(false);
   const [cartItems, setCartItems] = useState({});
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
 
-const fetchProductData = async () => {
-  console.log("Fetching product data..."); // Debugging log
+  // Load token from localStorage only on the client side
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const storedToken = localStorage.getItem("token");
+      if (storedToken) {
+        setToken(storedToken);
+      }
+    }
+  }, []);
 
+  const fetchProductData = async () => {
+    console.log("Fetching product data...");
     try {
-      const { data } = await axios.get('/api/product/list');
+      const { data } = await axios.get("/api/product/list");
       if (data.success) {
         setProducts(data.products);
       } else {
@@ -35,101 +43,146 @@ const fetchProductData = async () => {
       }
     } catch (error) {
       toast.error(error?.response?.data?.message || "Error fetching products");
+    } finally {
+      setIsLoadingProducts(false);
     }
   };
 
-const fetchUserData = async () => {
-  console.log("Fetching user data..."); // Debugging log
-
+  const fetchUserData = async () => {
+    if (!token) {
+      console.log("No token available for fetchUserData");
+      return;
+    }
+    console.log("Fetching user data with token:", token);
     try {
-      if (user.publicMetadata.role === 'seller') {
-        setIsSeller(true);
-      }
-      const tokenResponse = await getToken();
-      const token = tokenResponse?.token;
-      if (!token) {
-        throw new Error("Failed to retrieve token");
-      }
-      const { data } = await axios.get('/api/user/data', { headers: { Authorization: `Bearer ${token}` } });
-      if (data.success) {
-        setUserData(data.user);
-        setCartItems(data.user.cartItems);
+      const { data } = await axios.get("/api/user/data", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (data.success && data.data) {
+        setUserData(data.data);
+        setUser({
+          id: data.data.id,
+          email: data.data.email,
+          role: data.data.role,
+        });
+        setCartItems(data.data.cartItems || {});
+        setIsSeller(data.data.role === "seller");
+        console.log("User data fetched successfully:", data.data);
       } else {
         toast.error(data.message || "Failed to fetch user data");
+        setCartItems({});
       }
     } catch (error) {
-      toast.error(error.response.data.message || "Error fetching user data");
+      console.error("Fetch user data error:", error);
+      const errorMessage = error.response?.data?.message || "Error fetching user data";
+      toast.error(errorMessage);
+      if (error.response?.status === 401) {
+        setUser(null);
+        setToken(null);
+        localStorage.removeItem("token");
+        router.push("/login");
+        toast.error("Session expired. Please log in again.");
+      }
+    }
+  };
+
+  const fetchCartData = async () => {
+    if (!token) {
+      console.log("No token available for fetchCartData");
+      return;
+    }
+    console.log("Fetching cart data with token:", token);
+    try {
+      const { data } = await axios.get("/api/cart/update", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (data.success) {
+        setCartItems(data.data || {});
+        console.log("Cart data fetched successfully:", data.data);
+      } else {
+        toast.error(data.message || "Failed to fetch cart data");
+        setCartItems({});
+      }
+    } catch (error) {
+      console.error("Fetch cart data error:", error);
+      const errorMessage = error.response?.data?.message || "Error fetching cart data";
+      toast.error(errorMessage);
+      if (error.response?.status === 401) {
+        setUser(null);
+        setToken(null);
+        localStorage.removeItem("token");
+        router.push("/login");
+        toast.error("Session expired. Please log in again.");
+      }
     }
   };
 
   const addToCart = async (itemId) => {
-    let cartData = structuredClone(cartItems);
-    if (cartData[itemId]) {
-      cartData[itemId] += 1;
-    } else {
-      cartData[itemId] = 1;
-    }
+    const cartData = { ...cartItems };
+    cartData[itemId] = (cartData[itemId] || 0) + 1;
     setCartItems(cartData);
 
-    if (user) {
+    if (token) {
       try {
-        const tokenResponse = await getToken();
-        const token = tokenResponse?.token;
-        const { data } = await axios.post('/api/cart/update', { cartData }, { headers: { Authorization: `Bearer ${token}` } });
+        const { data } = await axios.post(
+          "/api/cart/update",
+          { cartData },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
         if (data.success) {
-          toast.success('Item added to cart');
+          toast.success("Item added to cart");
         } else {
           toast.error(data.message || "Failed to update cart");
         }
       } catch (error) {
-        toast.error(error?.response?.data?.message || "Error updating cart");
+        console.error("Add to cart error:", error);
+        toast.error(error.response?.data?.message || "Error updating cart");
       }
     }
   };
 
   const updateCartQuantity = async (itemId, quantity) => {
-    let cartData = structuredClone(cartItems);
-    if (quantity === 0) {
+    const cartData = { ...cartItems };
+    if (quantity <= 0) {
       delete cartData[itemId];
     } else {
       cartData[itemId] = quantity;
     }
     setCartItems(cartData);
-    if (user) {
+
+    if (token) {
       try {
-        const tokenResponse = await getToken();
-        const token = tokenResponse?.token;
-        const { data } = await axios.post('/api/cart/update', { cartData }, { headers: { Authorization: `Bearer ${token}` } });
+        const { data } = await axios.post(
+          "/api/cart/update",
+          { cartData },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
         if (data.success) {
-          toast.success('Cart Updated');
+          toast.success("Cart updated");
         } else {
           toast.error(data.message || "Failed to update cart");
         }
       } catch (error) {
-        toast.error(error?.response?.data?.message || "Error updating cart");
+        console.error("Update cart quantity error:", error);
+        toast.error(error.response?.data?.message || "Error updating cart");
       }
     }
   };
 
   const getCartCount = () => {
-    let totalCount = 0;
-    for (const key in cartItems) {
-      if (cartItems[key] > 0) {
-        totalCount += cartItems[key];
-      }
-    }
-    return totalCount;
+    return Object.values(cartItems).reduce((total, count) => total + (count > 0 ? count : 0), 0);
   };
 
   const getCartAmount = () => {
-    let totalAmount = 0;
-    for (const key in cartItems) {
-      const itemInfo = products.find((product) => product._id === key);
-      if (itemInfo && cartItems[key] > 0) {
-        totalAmount += itemInfo.offerPrice * cartItems[key];
-      }
-    }
-    return Math.floor(totalAmount * 100) / 100;
+    const totalAmount = Object.entries(cartItems).reduce((total, [itemId, quantity]) => {
+      const itemInfo = products.find((product) => product._id === itemId);
+      return itemInfo && quantity > 0 ? total + itemInfo.offerPrice * quantity : total;
+    }, 0);
+    return Number(totalAmount.toFixed(2));
   };
 
   useEffect(() => {
@@ -137,27 +190,40 @@ const fetchUserData = async () => {
   }, []);
 
   useEffect(() => {
-    if (user) {
+    if (token) {
       fetchUserData();
+      fetchCartData();
+    } else {
+      setUserData(null);
+      setIsSeller(false);
+      setCartItems({});
     }
-  }, [user]);
+  }, [token]);
 
   const value = {
-    user, getToken,
-    currency, router,
-    isSeller, setIsSeller,
-    userData, fetchUserData,
-    products, fetchProductData,
-    cartItems, setCartItems,
-    addToCart, updateCartQuantity,
-    getCartCount, getCartAmount
+    user,
+    setUser,
+    token,
+    setToken,
+    currency,
+    router,
+    isSeller,
+    setIsSeller,
+    userData,
+    fetchUserData,
+    products,
+    fetchProductData,
+    cartItems,
+    setCartItems,
+    addToCart,
+    updateCartQuantity,
+    getCartCount,
+    getCartAmount,
+    isLoadingProducts,
+    fetchCartData,
   };
 
-  return (
-    <AppContext.Provider value={value}>
-      {props.children}
-    </AppContext.Provider>
-  );
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };
 
 export default AppContextProvider;

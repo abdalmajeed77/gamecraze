@@ -1,4 +1,3 @@
-// app/product/[id]/page.jsx
 "use client";
 import { useEffect, useState } from "react";
 import { assets } from "@/assets/assets";
@@ -9,6 +8,7 @@ import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import Loading from "@/components/Loading";
 import { useAppContext } from "@/context/AppContext";
+import toast from "react-hot-toast";
 
 const Product = () => {
   const { id } = useParams();
@@ -19,6 +19,8 @@ const Product = () => {
   const [priceOptions, setPriceOptions] = useState([]);
   const [selectedPriceOption, setSelectedPriceOption] = useState(null);
   const [priceFetchError, setPriceFetchError] = useState(null);
+  const [emailOrId, setEmailOrId] = useState("");
+  const [isEmailOrIdLocked, setIsEmailOrIdLocked] = useState(false);
 
   useEffect(() => {
     if (!isLoadingProducts) {
@@ -62,8 +64,49 @@ const Product = () => {
     setSelectedPriceOption(priceOptions[selectedIndex]);
   };
 
+  const handleLockEmailOrId = () => {
+    if (!emailOrId.trim()) {
+      toast.error("Please enter an email or ID");
+      return;
+    }
+    setIsEmailOrIdLocked(true);
+    toast.success("Email/ID locked");
+  };
+
+  const handleUnlockEmailOrId = () => {
+    setIsEmailOrIdLocked(false);
+    toast.success("Email/ID unlocked");
+  };
+
+  const handleAddToCart = () => {
+    if (!emailOrId.trim()) {
+      toast.error("Please enter an email or ID");
+      return;
+    }
+    if (!isEmailOrIdLocked) {
+      toast.error("Please lock the email or ID");
+      return;
+    }
+    addToCart(productData._id, {
+      emailOrId,
+      selectedPrice: selectedPriceOption?.price || productData.offerPrice || productData.price,
+    });
+    toast.success("Added to cart with email/ID and price");
+  };
+
   const handleBuyNow = () => {
-    addToCart(productData._id);
+    if (!emailOrId.trim()) {
+      toast.error("Please enter an email or ID");
+      return;
+    }
+    if (!isEmailOrIdLocked) {
+      toast.error("Please lock the email or ID");
+      return;
+    }
+    addToCart(productData._id, {
+      emailOrId,
+      selectedPrice: selectedPriceOption?.price || productData.offerPrice || productData.price,
+    });
     if (!token) {
       localStorage.setItem("intendedRoute", "/cart");
       router.push("/login");
@@ -164,7 +207,33 @@ const Product = () => {
               {productData.description || "No description available"}
             </p>
             <div className="mt-6">
-              <p className="text-3xl font-medium">
+              <div className="mt-4">
+                <label htmlFor="email-or-id" className="block text-gray-600 font-medium">
+                  Enter Email or ID
+                </label>
+                <div className="flex items-center gap-2 mt-2">
+                  <input
+                    id="email-or-id"
+                    type="text"
+                    value={emailOrId}
+                    onChange={(e) => setEmailOrId(e.target.value)}
+                    placeholder="Enter email or ID"
+                    disabled={isEmailOrIdLocked}
+                    className="p-2 border rounded w-full max-w-xs disabled:bg-gray-200 disabled:cursor-not-allowed"
+                  />
+                  <button
+                    onClick={isEmailOrIdLocked ? handleUnlockEmailOrId : handleLockEmailOrId}
+                    className={`px-4 py-2 rounded ${
+                      isEmailOrIdLocked
+                        ? "bg-gray-500 hover:bg-gray-600"
+                        : "bg-orange-500 hover:bg-orange-600"
+                    } text-white transition`}
+                  >
+                    {isEmailOrIdLocked ? "Unlock" : "Lock"}
+                  </button>
+                </div>
+              </div>
+              <p className="text-3xl font-medium mt-4">
                 ${displayPrice.toFixed(2)}
                 {productData.price && productData.price !== displayPrice && (
                   <span className="text-base font-normal text-gray-800/60 line-through ml-2">
@@ -202,13 +271,13 @@ const Product = () => {
             <div className="overflow-x-auto">
               <table className="table-auto border-collapse w-full max-w-72">
                 <tbody>
-
+                  {/* Table content unchanged */}
                 </tbody>
               </table>
             </div>
             <div className="flex items-center mt-10 gap-4">
               <button
-                onClick={() => addToCart(productData._id)}
+                onClick={handleAddToCart}
                 className="w-full py-3.5 bg-gray-100 text-gray-800/80 hover:bg-gray-200 transition"
               >
                 Add to Cart
@@ -236,7 +305,7 @@ const Product = () => {
           </div>
           <button
             onClick={() => router.push("/all-products")}
-            className="px-8 py-2 mb-16 border rounded text-gray-500/70 hover:bg-slate-50/90 transition"
+            className="px-8 py-2 mb-16 border rounded text-gray-800/70 hover:bg-slate-50/90 transition"
           >
             See More
           </button>

@@ -1,36 +1,32 @@
 import { NextResponse } from "next/server";
-import mongoose from "mongoose";
-import User from "@/models/User";
+import jwt from "jsonwebtoken";
+import { cookies } from "next/headers";
+import connectDB from "@/utils/connectDB";
 
-export async function connectDB() {
-  if (mongoose.connection.readyState !== 1) {
-    console.log("Connecting to MongoDB...");
-    await mongoose.connect(process.env.MONGODB_URI, { dbName: "gamecart" });
-    console.log("MongoDB connected");
-  }
-}
-
-export async function POST(request) {
+export async function POST() {
   try {
     await connectDB();
-    const { userId } = await request.json();
 
-    if (!userId) {
+    const token = cookies().get("token")?.value;
+    if (!token) {
       return NextResponse.json(
-        { success: false, message: "User ID is required" },
+        { success: false, message: "No active session" },
         { status: 400 }
       );
     }
 
-    const user = await User.findById(userId);
-    if (!user) {
+    // Verify token to ensure it's valid
+    try {
+      jwt.verify(token, process.env.JWT_SECRET);
+    } catch (error) {
       return NextResponse.json(
-        { success: false, message: "User not found" },
-        { status: 404 }
+        { success: false, message: "Invalid or expired session" },
+        { status: 401 }
       );
     }
 
-    await user.clearJwtToken();
+    // Clear the token cookie
+    cookies().delete("token");
 
     return NextResponse.json(
       { success: true, message: "Logged out successfully" },
@@ -43,4 +39,16 @@ export async function POST(request) {
       { status: 500 }
     );
   }
+}
+
+// Handle CORS for OPTIONS request
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Allow-Credentials": "true",
+    },
+  });
 }

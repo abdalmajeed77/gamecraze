@@ -3,6 +3,7 @@ import axios from "axios";
 import { useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import Cookies from "js-cookie";
 
 export const AppContext = createContext();
 
@@ -15,25 +16,67 @@ export const AppContextProvider = ({ children }) => {
   const router = useRouter();
 
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null); // Initialize as null
+  const [token, setToken] = useState(null);
   const [products, setProducts] = useState([]);
   const [userData, setUserData] = useState(null);
   const [isSeller, setIsSeller] = useState(false);
   const [cartItems, setCartItems] = useState({});
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
 
-  // Load token from localStorage only on the client side
+  // Load token from cookies synchronously to avoid race conditions
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const storedToken = localStorage.getItem("token");
-      if (storedToken) {
-        setToken(storedToken);
-      }
+    const storedToken = Cookies.get("token");
+    if (storedToken) {
+      console.log("AppContext: Loaded token from cookies:", storedToken.substring(0, 20) + "...");
+      setToken(storedToken);
+    } else {
+      console.log("AppContext: No token found in cookies");
+      setToken(null);
     }
   }, []);
 
+  // Verify authentication
+  const verifyAuth = async () => {
+    try {
+      if (!token) {
+        console.log("verifyAuth: No token available");
+        toast.error("No authentication token found");
+        return false;
+      }
+      const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL
+        ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/verify`
+        : "/api/auth/verify";
+      console.log("verifyAuth: Sending request to", apiUrl, "with token:", token.substring(0, 20) + "...");
+      const response = await axios.get(apiUrl, {
+        headers: { Authorization: `Bearer ${token}` },
+        withCredentials: true,
+      });
+      console.log("verifyAuth: Response:", response.data);
+      if (response.data.verified) {
+        setUser({
+          id: response.data.user.id,
+          email: response.data.user.email,
+          role: response.data.user.role,
+        });
+        return true;
+      }
+      console.log("verifyAuth: Verification failed:", response.data);
+      toast.error("Verification failed: " + (response.data.message || "Unknown error"));
+      return false;
+    } catch (error) {
+      console.error("verifyAuth: Error:", {
+        message: error.message,
+        code: error.code,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      toast.error("Authentication verification failed: " + (error.response?.data?.message || error.message));
+      return false;
+    }
+  };
+
+  // Fetch products
   const fetchProductData = async () => {
-    console.log("Fetching product data...");
     try {
       const { data } = await axios.get("/api/product/list");
       if (data.success) {
@@ -48,17 +91,19 @@ export const AppContextProvider = ({ children }) => {
     }
   };
 
+  // Fetch user data
   const fetchUserData = async () => {
     if (!token) {
-      console.log("No token available for fetchUserData");
+      console.log("fetchUserData: No token, skipping");
       return;
     }
-    console.log("Fetching user data with token:", token);
     try {
+      console.log("fetchUserData: Fetching with token:", token.substring(0, 20) + "...");
       const { data } = await axios.get("/api/user/data", {
         headers: { Authorization: `Bearer ${token}` },
+        withCredentials: true,
       });
-
+      console.log("fetchUserData: Response:", data);
       if (data.success && data.data) {
         setUserData(data.data);
         setUser({
@@ -68,137 +113,209 @@ export const AppContextProvider = ({ children }) => {
         });
         setCartItems(data.data.cartItems || {});
         setIsSeller(data.data.role === "seller");
-        console.log("User data fetched successfully:", data.data);
       } else {
         toast.error(data.message || "Failed to fetch user data");
         setCartItems({});
       }
     } catch (error) {
-      console.error("Fetch user data error:", error);
-      const errorMessage = error.response?.data?.message || "Error fetching user data";
-      toast.error(errorMessage);
+      console.error("fetchUserData: Error:", error);
+      toast.error(error.response?.data?.message || "Error fetching user data");
       if (error.response?.status === 401) {
-        setUser(null);
-        setToken(null);
-        localStorage.removeItem("token");
-        router.push("/login");
-        toast.error("Session expired. Please log in again.");
+        logout();
       }
     }
   };
 
+  // Fetch cart data
   const fetchCartData = async () => {
     if (!token) {
-      console.log("No token available for fetchCartData");
+      console.log("fetchCartData: No token, skipping");
       return;
     }
-    console.log("Fetching cart data with token:", token);
     try {
+      console.log("fetchCartData: Fetching with token:", token.substring(0, 20) + "...");
       const { data } = await axios.get("/api/cart/update", {
         headers: { Authorization: `Bearer ${token}` },
+        withCredentials: true,
       });
-
+      console.log("fetchCartData: Response:", data);
       if (data.success) {
         setCartItems(data.data || {});
-        console.log("Cart data fetched successfully:", data.data);
       } else {
         toast.error(data.message || "Failed to fetch cart data");
-        setCartItems({});
       }
     } catch (error) {
-      console.error("Fetch cart data error:", error);
-      const errorMessage = error.response?.data?.message || "Error fetching cart data";
-      toast.error(errorMessage);
+      console.error("fetchCartData: Error:", {
+        message: error.message,
+        code: error.code,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      toast.error(error.response?.data?.message || "Error fetching cart data");
       if (error.response?.status === 401) {
-        setUser(null);
-        setToken(null);
-        localStorage.removeItem("token");
-        router.push("/login");
+        console.warn("fetchCartData: 401 Unauthorized, redirecting to login");
         toast.error("Session expired. Please log in again.");
+        logout();
+      } else if (error.response?.status === 500) {
+        toast.error("Server error fetching cart. Please try again later.");
       }
     }
   };
 
-  const addToCart = async (itemId) => {
-    const cartData = { ...cartItems };
-    cartData[itemId] = (cartData[itemId] || 0) + 1;
+  // Add to cart
+  const addToCart = async (itemId, cartItemDetails = {}) => {
+    let cartData = { ...cartItems };
+    if (!cartData[itemId]) {
+      cartData[itemId] = { quantity: 1, ...cartItemDetails };
+    } else {
+      cartData[itemId].quantity += 1;
+      cartData[itemId] = { ...cartData[itemId], ...cartItemDetails };
+    }
     setCartItems(cartData);
 
-    if (token) {
-      try {
-        const { data } = await axios.post(
-          "/api/cart/update",
-          { cartData },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+    if (!token) {
+      localStorage.setItem("cartItems", JSON.stringify(cartData));
+      toast.success("Item added to cart");
+      return;
+    }
 
-        if (data.success) {
-          toast.success("Item added to cart");
-        } else {
-          toast.error(data.message || "Failed to update cart");
-        }
-      } catch (error) {
-        console.error("Add to cart error:", error);
-        toast.error(error.response?.data?.message || "Error updating cart");
+    try {
+      console.log("addToCart: Updating cart with:", { itemId, cartData });
+      const { data } = await axios.post(
+        "/api/cart/update",
+        { cartData },
+        { headers: { Authorization: `Bearer ${token}` }, withCredentials: true }
+      );
+      if (data.success) {
+        toast.success("Item added to cart");
+      } else {
+        toast.error(data.message || "Failed to update cart");
+      }
+    } catch (error) {
+      console.error("addToCart: Error:", error);
+      toast.error(error.response?.data?.message || "Error updating cart");
+      if (error.response?.status === 401) {
+        logout();
       }
     }
   };
 
+  // Update cart quantity
   const updateCartQuantity = async (itemId, quantity) => {
-    const cartData = { ...cartItems };
+    let cartData = { ...cartItems };
     if (quantity <= 0) {
       delete cartData[itemId];
     } else {
-      cartData[itemId] = quantity;
+      cartData[itemId] = { ...cartData[itemId], quantity };
     }
     setCartItems(cartData);
 
-    if (token) {
-      try {
-        const { data } = await axios.post(
-          "/api/cart/update",
-          { cartData },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+    if (!token) {
+      localStorage.setItem("cartItems", JSON.stringify(cartData));
+      toast.success("Cart updated");
+      return;
+    }
 
-        if (data.success) {
-          toast.success("Cart updated");
-        } else {
-          toast.error(data.message || "Failed to update cart");
-        }
-      } catch (error) {
-        console.error("Update cart quantity error:", error);
-        toast.error(error.response?.data?.message || "Error updating cart");
+    try {
+      const { data } = await axios.post(
+        "/api/cart/update",
+        { cartData },
+        { headers: { Authorization: `Bearer ${token}` }, withCredentials: true }
+      );
+      if (data.success) {
+        toast.success("Cart updated");
+      } else {
+        toast.error(data.message || "Failed to update cart");
+      }
+    } catch (error) {
+      console.error("updateCartQuantity: Error:", error);
+      toast.error(error.response?.data?.message || "Error updating cart");
+      if (error.response?.status === 401) {
+        logout();
       }
     }
   };
 
+  // Get cart count
   const getCartCount = () => {
-    return Object.values(cartItems).reduce((total, count) => total + (count > 0 ? count : 0), 0);
+    return Object.values(cartItems).reduce((total, item) => total + (item.quantity > 0 ? item.quantity : 0), 0);
   };
 
+  // Get cart amount
   const getCartAmount = () => {
-    const totalAmount = Object.entries(cartItems).reduce((total, [itemId, quantity]) => {
+    const totalAmount = Object.entries(cartItems).reduce((total, [itemId, item]) => {
       const itemInfo = products.find((product) => product._id === itemId);
-      return itemInfo && quantity > 0 ? total + itemInfo.offerPrice * quantity : total;
+      const price = item.selectedPrice || itemInfo?.offerPrice || itemInfo?.price || 0;
+      return item.quantity > 0 ? total + price * item.quantity : total;
     }, 0);
     return Number(totalAmount.toFixed(2));
   };
 
-  useEffect(() => {
-    fetchProductData();
-  }, []);
-
-  useEffect(() => {
-    if (token) {
-      fetchUserData();
-      fetchCartData();
-    } else {
+  // Logout
+  const logout = async () => {
+    try {
+      console.log("logout: Sending logout request");
+      await axios.post("/api/logout", {}, { withCredentials: true });
+      console.log("logout: Logout request successful");
+      Cookies.remove("token", { path: "/" });
+      setToken(null);
+      setUser(null);
       setUserData(null);
       setIsSeller(false);
       setCartItems({});
+      router.push("/login");
+      toast.success("Logged out successfully");
+    } catch (error) {
+      console.error("logout: Error:", error);
+      toast.error("Failed to log out");
+    }
+  };
+
+  // Merge guest cart
+  const mergeGuestCart = async () => {
+    const guestCart = JSON.parse(localStorage.getItem("cartItems") || "{}");
+    if (Object.keys(guestCart).length > 0) {
+      let cartData = { ...cartItems, ...guestCart };
+      setCartItems(cartData);
+      if (token) {
+        try {
+          console.log("mergeGuestCart: Merging with token:", token.substring(0, 20) + "...");
+          const { data } = await axios.post(
+            "/api/cart/update",
+            { cartData },
+            { headers: { Authorization: `Bearer ${token}` }, withCredentials: true }
+          );
+          if (data.success) {
+            localStorage.removeItem("cartItems");
+            toast.success("Guest cart merged");
+          }
+        } catch (error) {
+          console.error("mergeGuestCart: Error:", error);
+          toast.error(error.response?.data?.message || "Error merging cart");
+        }
+      }
+    }
+  };
+
+  // Fetch data on token change
+  useEffect(() => {
+    if (token) {
+      console.log("AppContext: Token changed, fetching data:", token.substring(0, 20) + "...");
+      fetchUserData();
+      fetchCartData();
+      mergeGuestCart();
+    } else {
+      console.log("AppContext: No token, resetting state");
+      setUserData(null);
+      setIsSeller(false);
+      setCartItems(JSON.parse(localStorage.getItem("cartItems") || "{}"));
     }
   }, [token]);
+
+  // Fetch products on mount
+  useEffect(() => {
+    fetchProductData();
+  }, []);
 
   const value = {
     user,
@@ -210,7 +327,9 @@ export const AppContextProvider = ({ children }) => {
     isSeller,
     setIsSeller,
     userData,
+    setUserData,
     fetchUserData,
+    fetchCartData,
     products,
     fetchProductData,
     cartItems,
@@ -220,7 +339,8 @@ export const AppContextProvider = ({ children }) => {
     getCartCount,
     getCartAmount,
     isLoadingProducts,
-    fetchCartData,
+    verifyAuth,
+    logout,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

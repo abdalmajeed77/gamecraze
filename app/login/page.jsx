@@ -12,7 +12,7 @@ const LoginPage = () => {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const { setToken, setUserData, verifyAuth } = useAppContext();
+  const { setToken, setUserData, fetchCartData } = useAppContext();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -30,51 +30,56 @@ const LoginPage = () => {
         ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/login`
         : "/api/login";
 
+      console.log("handleLogin: Sending login request to", apiUrl);
       const response = await axios.post(
         apiUrl,
         { email: username, password },
         { withCredentials: true, headers: { "Content-Type": "application/json" } }
       );
       const data = response.data;
+      console.log("handleLogin: Login response:", {
+        success: data.success,
+        userId: data.userId,
+        role: data.role,
+        token: data.token ? data.token.substring(0, 20) + "..." : "No token",
+      });
 
       if (data.success && data.token) {
-        // Set token in cookies with immediate effect
+        // Set token in cookies
         Cookies.set("token", data.token, {
-          expires: 1 / 24, // 1 hour
+          expires: 7,
           secure: process.env.NODE_ENV === "production",
           sameSite: "strict",
         });
+        console.log("handleLogin: Token set in cookies:", data.token.substring(0, 20) + "...");
 
-        // Update context with token and user data
+        // Update context
         await setToken(data.token);
         await setUserData({
           id: data.userId,
           email: username,
           role: data.role,
         });
+        console.log("handleLogin: Context updated with user data");
 
-        // Verify authentication
-        const isAuth = await verifyAuth();
-        if (isAuth) {
-          toast.success(data.message || "Login successful!");
-          const intendedRoute = localStorage.getItem("intendedRoute") || "/all-products";
-          localStorage.removeItem("intendedRoute");
-          router.push(intendedRoute);
-        } else {
-          // Provide specific error details
-          setError("Authentication verification failed. Please try again.");
-          toast.error("Authentication verification failed.");
-          Cookies.remove("token"); // Clean up invalid token
-          await setToken(null);
-          await setUserData(null);
-          router.push("/login");
-        }
+        // Fetch cart data
+        await fetchCartData();
+        console.log("handleLogin: Cart data fetched");
+
+        toast.success(data.message || "Login successful!");
+        const intendedRoute = localStorage.getItem("intendedRoute") || "/all-products";
+        localStorage.removeItem("intendedRoute");
+        router.push(intendedRoute);
       } else {
         setError(data.message || "Login failed.");
         toast.error(data.message || "Login failed.");
       }
     } catch (error) {
-      console.error("Login error:", error);
+      console.error("handleLogin: Error:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
       const errorMessage =
         error.response?.data?.message || error.message || "An error occurred. Please try again.";
       setError(errorMessage);

@@ -9,9 +9,10 @@ const SideBar = () => {
   const menuItems = [
     { name: "Add Product", path: "/seller", icon: assets.add_icon },
     { name: "Product List", path: "/seller/product-list", icon: assets.product_list_icon },
-    { name: "Orders", path: "/seller/orders", icon: assets.order_icon },
-    { name: "Manage Users", path: "/seller/manage-users", icon: assets.user_icon }, // New item
-    { name: "Manage Products", path: "/seller/manage-products", icon: assets.product_list_icon }, // New item
+    { name: "Manage Orders", path: "/seller/manage-orders", icon: assets.order_icon },
+    { name: "Manage Users", path: "/seller/manage-users", icon: assets.user_icon },
+    { name: "Manage Products", path: "/seller/manage-products", icon: assets.product_list_icon },
+    { name: "Payment Settings", path: "/seller/payment-settings", icon: assets.payment_icon || assets.order_icon },
   ];
 
   return (

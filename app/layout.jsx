@@ -1,7 +1,7 @@
 "use client";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import AppContextProvider, { useAppContext } from "../context/AppContext";
+import AppContextProvider, { useAppContext } from "@/context/AppContext";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -20,7 +20,7 @@ export default function RootLayout({ children }) {
 }
 
 const AuthWrapper = ({ children }) => {
-  const { requireAuth } = useAppContext();
+  const { verifyAuth, token } = useAppContext();
   const pathname = usePathname();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
@@ -44,12 +44,18 @@ const AuthWrapper = ({ children }) => {
         setIsCheckingAuth(false);
         return;
       }
-      await requireAuth(pathname);
-      setIsCheckingAuth(false);
+
+      if (!token || !(await verifyAuth())) {
+        const url = new URL("/login", window.location.origin);
+        url.searchParams.set("intendedRoute", pathname);
+        window.location.href = url.toString();
+      } else {
+        setIsCheckingAuth(false);
+      }
     };
 
     checkAuth();
-  }, [pathname]);
+  }, [pathname, token]);
 
   if (
     isCheckingAuth &&

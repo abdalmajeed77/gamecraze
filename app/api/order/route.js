@@ -36,13 +36,24 @@ export async function POST(request) {
     const { cartData } = await request.json();
     console.log("POST /api/cart/update: Received cartData:", cartData);
 
-    // Update user's cartItems as an Object
-    user.cartItems = cartData || {};
+    // Update user's cartItems
+    user.cartItems = new Map();
+    for (const [itemId, item] of Object.entries(cartData)) {
+      user.cartItems.set(itemId, {
+        quantity: item.quantity || 1,
+        emailOrId: item.emailOrId || "",
+        selectedPrice: item.selectedPrice || 0,
+      });
+    }
+
     await user.save();
     console.log("POST /api/cart/update: Cart updated for user:", decoded.userId);
 
+    // Convert Map to plain object for response
+    const cartItemsObject = Object.fromEntries(user.cartItems.entries());
+
     return NextResponse.json(
-      { success: true, data: user.cartItems },
+      { success: true, data: cartItemsObject },
       {
         status: 200,
         headers: {
@@ -99,8 +110,11 @@ export async function GET(request) {
     }
 
     console.log("GET /api/cart/update: Returning cart data");
+    // Convert Map to plain object for response
+    const cartItemsObject = Object.fromEntries(user.cartItems.entries());
+
     return NextResponse.json(
-      { success: true, data: user.cartItems || {} },
+      { success: true, data: cartItemsObject },
       {
         status: 200,
         headers: {

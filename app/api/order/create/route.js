@@ -104,6 +104,8 @@ export async function POST(request) {
       paymentStatus = "Completed";
     } else if (["UPI", "BankTransfer"].includes(paymentMethod)) {
       try {
+        // Get buffer from transactionImage before starting upload
+        const buffer = Buffer.from(await transactionImage.arrayBuffer());
         const uploadResult = await new Promise((resolve, reject) => {
           const uploadStream = cloudinary.uploader.upload_stream(
             { folder: "gamecart/transactions" },
@@ -112,7 +114,6 @@ export async function POST(request) {
               else resolve(result);
             }
           );
-          const buffer = Buffer.from(await transactionImage.arrayBuffer());
           uploadStream.end(buffer);
         });
         transactionImageUrl = uploadResult.secure_url;

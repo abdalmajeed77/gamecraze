@@ -28,7 +28,7 @@ const ManageProducts = () => {
         if (response.data && response.data.success) {
           const fetchedProducts = response.data.data || [];
           setProducts(fetchedProducts);
-          setFilteredProducts(fetchedProducts); // Initialize filtered products
+          setFilteredProducts(fetchedProducts);
         } else if (response.data && response.data.message) {
           toast.error(response.data.message);
         } else {
@@ -154,7 +154,7 @@ const ManageProducts = () => {
         const updatedResponse = await axios.get("/api/products");
         const updatedProducts = updatedResponse.data.data || [];
         setProducts(updatedProducts);
-        setFilteredProducts(updatedProducts); // Update filtered products after edit
+        setFilteredProducts(updatedProducts);
       } else {
         toast.error(response.data.message);
       }
@@ -174,7 +174,7 @@ const ManageProducts = () => {
           toast.success(response.data.message);
           const updatedProducts = products.filter((product) => product._id !== productId);
           setProducts(updatedProducts);
-          setFilteredProducts(updatedProducts); // Update filtered products after delete
+          setFilteredProducts(updatedProducts);
         } else {
           toast.error(response.data.message);
         }
@@ -220,7 +220,7 @@ const ManageProducts = () => {
   // Get unique categories for the filter dropdown
   const uniqueCategories = [
     ...new Set(products.map((product) => product.category)),
-  ].filter(Boolean); // Remove undefined or null categories
+  ].filter(Boolean);
 
   return (
     <div className="min-h-screen bg-white p-6">
@@ -385,7 +385,7 @@ const ManageProducts = () => {
                       <div className="flex space-x-2">
                         <input
                           type="number"
-                          value={option.price || 0}
+                          value={option.Price || 0}
                           onChange={(e) => handlePriceOptionChange(index, "price", e.target.value)}
                           className="w-1/3 p-2 bg-gold-50 text-gold-600 rounded border border-gold-200"
                           step="0.01"
@@ -470,22 +470,6 @@ const ManageProducts = () => {
       )}
     </div>
   );
-};
-
-export const config = {
-  theme: {
-    extend: {
-      colors: {
-        gold: {
-          50: "#FDF6E3",
-          100: "#FBEAC5",
-          200: "#F9DD9B",
-          600: "#D4A017",
-          700: "#B78C14",
-        },
-      },
-    },
-  },
 };
 
 export default ManageProducts;
